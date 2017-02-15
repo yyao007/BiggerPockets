@@ -43,4 +43,4 @@ There are two tables to store the data:
 | goals      | text         | YES  |     | NULL    |                |
 +------------+--------------+------+-----+---------+----------------+
 ```
-Consider to add a column 'crawl_time' to forumusers.
+Consider to add columns 'crawl_time' and 'companies' to forumusers.
