@@ -41,7 +41,7 @@ class Users(Base):
     numVotes = Column(Integer)
     numAwards = Column(Integer)
     account = Column(String(10)) # account type: base, plus, pro
-    city = Column(String(50))
+    city = Column(String(100))
     state = Column(String(50))
     dateJoined = Column(DateTime) # creation date of the user account
     seeking = Column(Text) # currently seeking
