@@ -31,7 +31,8 @@ class ForumSpider(scrapy.Spider):
             dis['URL'] = response.urljoin(URL[0])
             dis['title'] = name.xpath('a/text()').extract()[0]
             dis['categoryURL'] = response.urljoin(name.xpath('span/a/@href').extract()[0])
-            dis['category'] = name.xpath('span/a/text()').extract()[0]
+            dis['category'] = name.xpath('span/a/text()').extract()
+            dis['disPage'] = respone.url
             request = scrapy.Request(dis['URL'], callback=self.parse_posts, dont_filter=True)
             request.meta['dis'] = dis
             yield request
@@ -45,6 +46,7 @@ class ForumSpider(scrapy.Spider):
             if not post.xpath('section'):
                 continue
             item = postItem()
+            item['disPage'] = dis['disPage']
             item['URL'] = dis['URL']
             item['title'] = dis['title']
             item['categoryURL'] = dis['categoryURL']
@@ -81,6 +83,7 @@ class ForumSpider(scrapy.Spider):
             return 
         
         item = userItem()
+        item['disPage'] = pItem['disPage']
         item['uid'] = uid
         name = d.get('display_name', '').split()
         first, last = name if len(name) == 2 else [name[0], ''] if len(name) == 1 else [name[0], name[-1]] if name else ['', '']

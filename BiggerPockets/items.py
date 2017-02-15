@@ -17,10 +17,11 @@ class postItem(scrapy.Item):
     replyTo = scrapy.Field() # This is the first post id of the discussion
     postTime = scrapy.Field() # precise to hour eg. 2017-02-11 19:00:00
     body = scrapy.Field()
+    disPage = scrapy.Field()
     
     def __repr__(self):
         # only print out attr1 after exiting the Pipeline
-        return repr({"pid": self["pid"]})
+        return repr({"pid": self["pid"], 'page': self["disPage"]})
 
 class userItem(scrapy.Item):
     uid = scrapy.Field() # user id
@@ -41,8 +42,9 @@ class userItem(scrapy.Item):
     occupation = scrapy.Field()
     experience = scrapy.Field() # real estate experience
     goals = scrapy.Field() # real estate goals
+    disPage = scrapy.Field()
     
     def __repr__(self):
         # only print out attr1 after exiting the Pipeline
-        return repr({'firstName': self['firstName'], 'lastName': self['lastName']})
+        return repr({'firstName': self['firstName'], 'lastName': self['lastName'], 'page': self["disPage"]})
     
