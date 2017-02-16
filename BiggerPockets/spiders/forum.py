@@ -9,8 +9,8 @@ class ForumSpider(scrapy.Spider):
     name = "forum"
     allowed_domains = ["https://www.biggerpockets.com/"]
     # Starting from page 1 to 1899. BiggerPockets has around 1860 pages of forums
-    start_urls = ['https://www.biggerpockets.com/forums/?page=' + str(i) for i in range(500,1900)]
-    # start_urls = ['https://www.biggerpockets.com/forums/?page=1']
+    start_urls = ['https://www.biggerpockets.com/forums']+['https://www.biggerpockets.com/forums/?page=' + str(i) for i in range(1,1900)]
+    # start_urls = ['https://www.biggerpockets.com/forums']
     
     def __init__(self):
         self.users = set()
@@ -32,7 +32,7 @@ class ForumSpider(scrapy.Spider):
             dis['title'] = name.xpath('a/text()').extract()[0]
             dis['categoryURL'] = response.urljoin(name.xpath('span/a/@href').extract()[0])
             dis['category'] = name.xpath('span/a/text()').extract()
-            dis['disPage'] = respone.url
+            dis['disPage'] = response.url
             request = scrapy.Request(dis['URL'], callback=self.parse_posts, dont_filter=True)
             request.meta['dis'] = dis
             yield request
@@ -41,11 +41,13 @@ class ForumSpider(scrapy.Spider):
         dis = response.meta['dis']
         replyTo = int(response.xpath('//input[@id="first_post_id"]/@value').extract()[0])
         posts = response.xpath('//div[@class="topic"]/article')
+        replyid = dis.get('replyid', 0)
         for post in posts:
             # skip removed posts
             if not post.xpath('section'):
                 continue
             item = postItem()
+            item['replyid'] = replyid
             item['disPage'] = dis['disPage']
             item['URL'] = dis['URL']
             item['title'] = dis['title']
@@ -64,9 +66,11 @@ class ForumSpider(scrapy.Spider):
             request = scrapy.Request(user_url, callback=self.parse_users1, dont_filter=True)
             request.meta['item'] = item
             yield request
+            replyid += 1
             
         nextPage = response.xpath('//a[@class="next-page"]/@href').extract()
         if nextPage:
+            dis['replyid'] = replyid
             nextPage = response.urljoin(nextPage[0])
             request = scrapy.Request(nextPage, callback=self.parse_posts, dont_filter=True)
             request.meta['dis'] = dis

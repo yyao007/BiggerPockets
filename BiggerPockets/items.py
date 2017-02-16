@@ -12,6 +12,7 @@ class postItem(scrapy.Item):
     title = scrapy.Field() # discussion title
     category = scrapy.Field() # discussion category
     categoryURL = scrapy.Field()
+    replyid = scrapy.Field() # reply id based on the discussion URL
     pid = scrapy.Field() # post id
     uid = scrapy.Field() # user id
     replyTo = scrapy.Field() # This is the first post id of the discussion
@@ -21,7 +22,7 @@ class postItem(scrapy.Item):
     
     def __repr__(self):
         # only print out attr1 after exiting the Pipeline
-        return repr({"pid": self["pid"], 'page': self["disPage"]})
+        return repr({"pid": self["pid"], 'page': self["disPage"][-6:]})
 
 class userItem(scrapy.Item):
     uid = scrapy.Field() # user id
@@ -46,5 +47,5 @@ class userItem(scrapy.Item):
     
     def __repr__(self):
         # only print out attr1 after exiting the Pipeline
-        return repr({'firstName': self['firstName'], 'lastName': self['lastName'], 'page': self["disPage"]})
+        return repr([self['firstName'], self['lastName'], self["disPage"][-6:]])
     
