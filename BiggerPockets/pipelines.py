@@ -8,7 +8,7 @@ from scrapy.exceptions import DropItem
 from sqlalchemy import create_engine
 from sqlalchemy.orm import sessionmaker
 from sqlalchemy import Column, ForeignKey
-from sqlalchemy.types import Integer, String, DateTime, Text, UnicodeText
+from sqlalchemy.types import Integer, String, DateTime, Text, TIMESTAMP
 from sqlalchemy.sql import func
 from sqlalchemy.dialects.mysql import INTEGER
 from sqlalchemy.ext.declarative import declarative_base
@@ -16,20 +16,20 @@ from BiggerPockets.items import postItem, userItem
 
 Base = declarative_base()
 class Posts(Base):
-    __tablename__ = 'forumposts1'
+    __tablename__ = 'forumposts'
     URL = Column(String(200), primary_key=True)
     replyid = Column(Integer, primary_key=True)
     pid = Column(Integer) # post id    
     title = Column(String(500))
     category = Column(String(500)) # discussion category
     categoryURL = Column(String(500))
-    uid = Column(Integer, ForeignKey('forumusers1.uid', onupdate="CASCADE", ondelete='CASCADE')) # user id
+    uid = Column(Integer, ForeignKey('forumusers.uid', onupdate="CASCADE", ondelete='CASCADE')) # user id
     replyTo = Column(Integer) # This is the first post id of the discussion
     postTime = Column(DateTime(timezone=True)) # precise to hour eg. 2017-02-11 19:00:00
     body = Column(Text)
 
 class Users(Base):
-    __tablename__ = 'forumusers1'
+    __tablename__ = 'forumusers'
 
     uid = Column(Integer, primary_key=True) # user id
     firstName = Column(String(20))
@@ -49,11 +49,11 @@ class Users(Base):
     experience = Column(Text) # real estate experience
     occupation = Column(String(767))
     goals = Column(Text) # real estate goals
-    crawl_time = Column(DateTime(timezone=True), server_default=func.now(), onupdate=func.now())
+    crawl_time = Column(TIMESTAMP(timezone=True), server_default=func.now(), onupdate=func.now())
 
 class BiggerpocketsPipeline(object):
     def open_spider(self, spider):
-        connStr = 'mysql+mysqldb://root:931005@127.0.0.1/us'
+        connStr = 'mysql+mysqldb://root:home123@127.0.0.1/homeDB'
         self.engine = create_engine(connStr, convert_unicode=True, echo=False)
         self.DB_session = sessionmaker(bind=self.engine)
         self.session = self.DB_session()
@@ -119,7 +119,7 @@ class BiggerpocketsPipeline(object):
             
 class DuplicatesPipeline(object):
     def __init__(self):
-        connStr = 'mysql+mysqldb://root:931005@127.0.0.1/us'
+        connStr = 'mysql+mysqldb://root:home123@127.0.0.1/homeDB'
         self.engine = create_engine(connStr, convert_unicode=True, echo=False)
         self.DB_session = sessionmaker(bind=self.engine)
         Base.metadata.create_all(self.engine)
@@ -127,8 +127,8 @@ class DuplicatesPipeline(object):
         self.users = set()
         self.users_seen = set()
         self.posts = set()
-        u = self.session.execute('select uid from forumusers1')
-        p = self.session.execute('select pid from forumposts1')
+        u = self.session.execute('select uid from forumusers')
+        p = self.session.execute('select pid from forumposts')
         for i in u:
             self.users.add(i[0])
         for i in p:
