@@ -13,6 +13,7 @@ from sqlalchemy.sql import func
 from sqlalchemy.dialects.mysql import INTEGER
 from sqlalchemy.ext.declarative import declarative_base
 from BiggerPockets.items import postItem, userItem
+from sqlalchemy.exc import InvalidRequestError
 
 Base = declarative_base()
 class Posts(Base):
@@ -72,11 +73,6 @@ class BiggerpocketsPipeline(object):
             return self.handleUser(item, spider)
                     
     def handlePost(self, item, spider):
-        self.count += 1
-        # commit every 100 posts
-        if self.count % 100 == 0:
-            self.session.commit()
-            
         post = Posts(URL=item.get('URL'),
                      replyid=item.get('replyid'),
                      pid=item.get('pid'),
@@ -88,9 +84,19 @@ class BiggerpocketsPipeline(object):
                      postTime=item.get('postTime'),
                      body=item.get('body'),
         )
-        self.session.add(post)
-        self.session.flush()
-        return item
+        # Avoid a post was deleted in the future
+        while True:
+            try:
+                self.session.add(post)
+                self.session.commit()
+                break
+            except InvalidRequestError:
+                self.session.rollback()
+                post.replyid += 1
+            else:
+                raise DropItem('Invalid item found...')
+                break
+	return item
         
     def handleUser(self, item, spider):
         user =Users(uid=item.get('uid'),

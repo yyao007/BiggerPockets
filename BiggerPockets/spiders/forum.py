@@ -9,7 +9,7 @@ class ForumSpider(scrapy.Spider):
     name = "forum"
     allowed_domains = ["https://www.biggerpockets.com/"]
     # Starting from page 1 to 1899. BiggerPockets has around 1860 pages of forums
-    start_urls = ['https://www.biggerpockets.com/forums']+['https://www.biggerpockets.com/forums/?page=' + str(i) for i in range(1,1900)]
+    start_urls = ['https://www.biggerpockets.com/forums']+['https://www.biggerpockets.com/forums/?page=' + str(i) for i in range(1,50)]
     # start_urls = ['https://www.biggerpockets.com/forums']
     
     def __init__(self):
@@ -45,6 +45,7 @@ class ForumSpider(scrapy.Spider):
         for post in posts:
             # skip removed posts
             if not post.xpath('section'):
+                replyid += 1
                 continue
             item = postItem()
             item['replyid'] = replyid
