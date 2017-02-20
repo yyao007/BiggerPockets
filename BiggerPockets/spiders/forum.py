@@ -45,6 +45,7 @@ class ForumSpider(scrapy.Spider):
         for post in posts:
             # skip removed posts
             if not post.xpath('section'):
+                replyid += 1
                 continue
             item = postItem()
             item['replyid'] = replyid
