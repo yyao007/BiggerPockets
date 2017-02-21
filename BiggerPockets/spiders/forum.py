@@ -9,7 +9,7 @@ class ForumSpider(scrapy.Spider):
     name = "forum"
     allowed_domains = ["https://www.biggerpockets.com/"]
     # Starting from page 1 to 1899. BiggerPockets has around 1860 pages of forums
-    start_urls = ['https://www.biggerpockets.com/forums']+['https://www.biggerpockets.com/forums/?page=' + str(i) for i in range(1,50)]
+    start_urls = ['https://www.biggerpockets.com/forums']+['https://www.biggerpockets.com/forums/?page=' + str(i) for i in range(1,150)]
     # start_urls = ['https://www.biggerpockets.com/forums']
     
     def __init__(self):
@@ -87,6 +87,7 @@ class ForumSpider(scrapy.Spider):
             yield pItem
             return 
         
+        self.users.add(uid)
         item = userItem()
         item['disPage'] = pItem['disPage']
         item['uid'] = uid
@@ -124,7 +125,6 @@ class ForumSpider(scrapy.Spider):
         item['followers'] = int(filter(unicode.isdigit, connections[1]))
         item['following'] = int(filter(unicode.isdigit, connections[2]))
         # return userItem first to meet the foreign key constraint
-        self.users.add(item['uid'])
         yield item
         yield response.meta['pItem']
     
