@@ -23,7 +23,7 @@ class Posts(Base):
     title = Column(String(500))
     category = Column(String(500)) # discussion category
     categoryURL = Column(String(500))
-    uid = Column(Integer, ForeignKey('forumusers1.uid', onupdate="CASCADE", ondelete='CASCADE')) # user id
+    uid = Column(String(20), ForeignKey('forumusers1.uid', onupdate="CASCADE", ondelete='CASCADE')) # user id
     replyTo = Column(Integer) # This is the first post id of the discussion
     postTime = Column(DateTime(timezone=True)) # precise to hour eg. 2017-02-11 19:00:00
     body = Column(Text)
@@ -31,7 +31,7 @@ class Posts(Base):
 class Users(Base):
     __tablename__ = 'forumusers1'
 
-    uid = Column(Integer, primary_key=True) # user id
+    uid = Column(String(20), primary_key=True) # user id
     firstName = Column(String(20))
     lastName = Column(String(20))
     source = Column(String(100)) # URL of the user profile
@@ -146,7 +146,7 @@ class DuplicatesPipeline(object):
         if isinstance(item, userItem):
             user = item.get('uid')
             if user in self.users_seen:
-                raise DropItem("Duplicate user found: %d" %(user))
+                raise DropItem("Duplicate user found: {0}".format(user))
             elif user in self.users:
                 d = {'colleagues': item.get('colleagues'),
                      'followers': item.get('followers'),
@@ -162,7 +162,7 @@ class DuplicatesPipeline(object):
                     update(d)
                 self.session.commit()     
                 self.users_seen.add(user)
-                raise DropItem("Updating user: %d" %(user))
+                raise DropItem("Updating user: {0}".format(user))
             else:    
                 self.users_seen.add(user)
                 return item     

@@ -80,7 +80,7 @@ class ForumSpider(scrapy.Spider):
     def parse_users1(self, response):
         pItem = response.meta['item']
         d = json.loads(response.text)['user']
-        uid = d.get('id')
+        uid = str(d.get('id', ''))
         pItem['uid'] = uid
         # Ignore duplicate users
         if uid in self.users:
