@@ -1,33 +1,57 @@
 # -*- coding: utf-8 -*-
 import scrapy
 from BiggerPockets.items import postItem, userItem
+from scrapy.utils.project import get_project_settings
 from datetime import datetime, timedelta
 from dateutil.relativedelta import relativedelta
 import json
 
 class ForumSpider(scrapy.Spider):
     name = "forum"
-    allowed_domains = ["https://www.biggerpockets.com/"]
+    allowed_domains = ["biggerpockets.com"]
     # Starting from page 1 to 1899. BiggerPockets has around 1860 pages of forums
-    start_urls = ['https://www.biggerpockets.com/forums']+['https://www.biggerpockets.com/forums/?page=' + str(i) for i in range(1,150)]
+    start_urls = ['https://www.biggerpockets.com/forums']+['https://www.biggerpockets.com/forums/?page=' + str(i) for i in range(1,500)]
     # start_urls = ['https://www.biggerpockets.com/forums']
-    
+    _stop_following_pages = False
+
     def __init__(self):
+        self.homeDB = None
         self.users = set()
-    
+        self.settings = get_project_settings()
+
+    def start_requests(self):
+        self._last_crawl_time = self.homeDB.get_last_crawl_time()
+        # start from a specified date
+        if not self.settings.get('SINCE_LAST_CRAWL_TIME'):
+            t = self.settings.get('LAST_TIME')
+            self._last_crawl_time = datetime.strptime(t, '%Y-%m-%d %H:%M:%S')
+
+        for url in self.start_urls:
+            if self._stop_following_pages:
+                self.logger.info('Hit the last time crawled page, stop following pages: {}'.format(url))
+                break
+            else:
+                yield scrapy.Request(url, callback=self.parse)
+
     def parse(self, response):
         discussions = response.xpath('//tbody/tr')
         if not discussions:
             print 'No forums, ignoring the url...'
             return
-        
-        for discuss in discussions:         
+
+        for discuss in discussions:
+            # stop following pages if seeing the last time crawled page
+            if self.isLastTime(discuss):
+                self.logger.info('stop following pages {}'.format(response))
+                self._stop_following_pages = True
+                return
+
             dis = {}
             name = discuss.xpath('td[@class="discussion-name"]')
             URL = name.xpath('a[@data-requires-user-level="0"]/@href').extract()
             # Skip private topic
             if not URL:
-                return
+                continue
             dis['URL'] = response.urljoin(URL[0])
             dis['title'] = name.xpath('a/text()').extract()[0]
             dis['categoryURL'] = response.urljoin(name.xpath('span/a/@href').extract()[0])
@@ -36,7 +60,7 @@ class ForumSpider(scrapy.Spider):
             request = scrapy.Request(dis['URL'], callback=self.parse_posts, dont_filter=True)
             request.meta['dis'] = dis
             yield request
-    
+
     def parse_posts(self, response):
         dis = response.meta['dis']
         replyTo = int(response.xpath('//input[@id="first_post_id"]/@value').extract()[0])
@@ -68,26 +92,25 @@ class ForumSpider(scrapy.Spider):
             request.meta['item'] = item
             yield request
             replyid += 1
-            
+
         nextPage = response.xpath('//a[@class="next-page"]/@href').extract()
         if nextPage:
             dis['replyid'] = replyid
             nextPage = response.urljoin(nextPage[0])
-            request = scrapy.Request(nextPage, callback=self.parse_posts, dont_filter=True)
+            request = scrapy.Request(nextPage, callback=self.parse_posts)
             request.meta['dis'] = dis
             yield request
-            
+
     def parse_users1(self, response):
         pItem = response.meta['item']
         d = json.loads(response.text)['user']
-        uid = d.get('id')
+        uid = str(d.get('id', ''))
         pItem['uid'] = uid
         # Ignore duplicate users
         if uid in self.users:
             yield pItem
-            return 
-        
-        self.users.add(uid)
+            return
+
         item = userItem()
         item['disPage'] = pItem['disPage']
         item['uid'] = uid
@@ -107,7 +130,7 @@ class ForumSpider(scrapy.Spider):
         t = d.get('created_on')
         if t:
             item['dateJoined'] = datetime.strptime(t, '%Y-%m-%dT%H:%M:%S-%f')
-        
+
         item['seeking'] = d.get('currently_seeking')
         item['occupation'] = d.get('occupation')
         item['experience'] = d.get('real_estate_experience')
@@ -116,7 +139,7 @@ class ForumSpider(scrapy.Spider):
         request.meta['item'] = item
         request.meta['pItem'] = pItem
         yield request
-        
+
     def parse_users2(self, response):
         item = response.meta['item']
         connections = response.xpath('//ul[@class="connections"]/li/span/text()').extract()
@@ -125,9 +148,21 @@ class ForumSpider(scrapy.Spider):
         item['followers'] = int(filter(unicode.isdigit, connections[1]))
         item['following'] = int(filter(unicode.isdigit, connections[2]))
         # return userItem first to meet the foreign key constraint
+        self.users.add(item['uid'])
         yield item
         yield response.meta['pItem']
-    
+
+    def isLastTime(self, dis):
+        last_activity = dis.xpath('td[@class="last-activity"]/text()').extract()
+        if last_activity:
+            last_activity[0] += ' ago'
+            new_post_time = self.getPostTime(last_activity[0])
+            if new_post_time < self._last_crawl_time:
+                return True
+
+        return False
+
+
     def getPostTime(self, posttime):
         curr = datetime.now()
         t = posttime.split()
@@ -151,7 +186,7 @@ class ForumSpider(scrapy.Spider):
         elif t[-2] in 'years':
             postTime = curr - relativedelta(years=td)
         return postTime
-            
-            
-            
-            
+
+
+
+

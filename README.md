@@ -1,3 +1,8 @@
+To run the crawler as a deamon, use screen to do that.
+```
+./start.sh 
+```
+
 # BiggerPockets
 
 There are two tables to store the data:

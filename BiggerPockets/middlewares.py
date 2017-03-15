@@ -7,34 +7,24 @@
 
 from scrapy import signals
 from scrapy.conf import settings
-from stem import Signal
-from stem.control import Controller
+import random
 import time
 
 class ProxyMiddleware(object):
     def __init__(self):
-        self.controller = Controller.from_port(port = 9151)
-        self.controller.authenticate('931005')
-        self.codes = set(int(x) for x in settings.getlist('RETRY_HTTP_CODES'))
         self.count = 0
-        
+
     def process_request(self, request, spider):
-        request.meta['proxy'] = settings.get('HTTP_PROXY')
-    
-    def process_response(self, request, response, spider):
+        proxy_pool = settings.get('HTTP_PROXY')
         self.count += 1
-        if response.status in self.codes or self.count % 100 == 0:
-            print 'Banned, changing circuit...'
-            self.new_circuit()
-            # print 'sleep 20s...'
-            # time.sleep(20)
-            # print 'Done!'
-        
-        return response
-        
-    def new_circuit(self):      
-        self.controller.signal(Signal.NEWNYM)
-        
+        n = 0
+        # change a proxy every 1000 requests
+#        if self.count % 1000 == 0:
+#            n = random.randint(0,3)
+
+        request.meta['proxy'] = proxy_pool[n]
+
+
 class BiggerpocketsSpiderMiddleware(object):
     # Not all methods need to be defined. If a method is not defined,
     # scrapy acts as if the spider middleware does not modify the

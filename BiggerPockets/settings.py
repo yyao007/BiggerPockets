@@ -27,7 +27,7 @@ ROBOTSTXT_OBEY = True
 # Configure a delay for requests for the same website (default: 0)
 # See http://scrapy.readthedocs.org/en/latest/topics/settings.html#download-delay
 # See also autothrottle settings and docs
-DOWNLOAD_DELAY = 0.7
+DOWNLOAD_DELAY = 1
 # The download delay setting will honor only one of:
 # CONCURRENT_REQUESTS_PER_DOMAIN = 16
 #CONCURRENT_REQUESTS_PER_IP = 16
@@ -45,7 +45,7 @@ DEFAULT_REQUEST_HEADERS = {
   # Be sure to enable XMLHttpRequest in order to get each page contents
   'x-requested-with': 'XMLHttpRequest',
   'user-agent': 'Mozilla/5.0 (Windows NT 10.0; WOW64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/53.0.2785.116 Safari/537.36',
-} 
+}
 
 USER_AGENT_LIST = [
     'Mozilla/5.0 (Windows NT 10.0; WOW64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/53.0.2785.116 Safari/537.36',
@@ -63,7 +63,13 @@ USER_AGENT_LIST = [
     'Mozilla/5.0 (X11; U; Linux x86_64; en-US) AppleWebKit/540.0 (KHTML,like Gecko) Chrome/9.1.0.0 Safari/540.0',
     'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_10_2) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/40.0.2214.38 Safari/537.36',
 ]
-HTTP_PROXY = 'http://127.0.0.1:8123'
+
+HTTP_PROXY = [
+    'd09.cs.ucr.edu:3128',
+    'd10.cs.ucr.edu:3128',
+    'd11.cs.ucr.edu:3128',
+    'd12.cs.ucr.edu:3128',
+]
 
 # Enable or disable spider middlewares
 # See http://scrapy.readthedocs.org/en/latest/topics/spider-middleware.html
@@ -74,7 +80,8 @@ HTTP_PROXY = 'http://127.0.0.1:8123'
 # Enable or disable downloader middlewares
 # See http://scrapy.readthedocs.org/en/latest/topics/downloader-middleware.html
 DOWNLOADER_MIDDLEWARES = {
-   # 'BiggerPockets.middlewares.ProxyMiddleware': 100,
+   #'BiggerPockets.middlewares.ProxyMiddleware': 1,
+   'scrapy.downloadermiddlewares.httpproxy.HttpProxyMiddleware': 110,
    'scrapy.downloadermiddlewares.useragent.UserAgentMiddleware': None,
 }
 
@@ -100,7 +107,7 @@ AUTOTHROTTLE_ENABLED = True
 #AUTOTHROTTLE_MAX_DELAY = 60
 # The average number of requests Scrapy should be sending in parallel to
 # each remote server
-AUTOTHROTTLE_TARGET_CONCURRENCY = 7.0
+AUTOTHROTTLE_TARGET_CONCURRENCY = 6.0
 # Enable showing throttling stats for every response received:
 #AUTOTHROTTLE_DEBUG = False
 
@@ -113,3 +120,8 @@ AUTOTHROTTLE_TARGET_CONCURRENCY = 7.0
 #HTTPCACHE_STORAGE = 'scrapy.extensions.httpcache.FilesystemCacheStorage'
 LOG_LEVEL = 'INFO'
 RETRY_HTTP_CODES = [500, 502, 503, 504, 408, 429, 403]
+SINCE_LAST_CRAWL_TIME = True
+LAST_TIME = '2017-03-01 12:48:47'
+
+
+

@@ -14,27 +14,30 @@ from sqlalchemy.dialects.mysql import INTEGER
 from sqlalchemy.ext.declarative import declarative_base
 from BiggerPockets.items import postItem, userItem
 from sqlalchemy.exc import InvalidRequestError
+from datetime import datetime
 
 Base = declarative_base()
 class Posts(Base):
     __tablename__ = 'forumposts'
-    URL = Column(String(200), primary_key=True)
+    URL = Column(String(500), primary_key=True)
     replyid = Column(Integer, primary_key=True)
-    pid = Column(Integer) # post id    
+    pid = Column(Integer) # post id
     title = Column(String(500))
     category = Column(String(500)) # discussion category
     categoryURL = Column(String(500))
-    uid = Column(Integer, ForeignKey('forumusers.uid', onupdate="CASCADE", ondelete='CASCADE')) # user id
+    uid = Column(String(50), ForeignKey('forumusers.uid', onupdate="CASCADE", ondelete='CASCADE')) # user id
     replyTo = Column(Integer) # This is the first post id of the discussion
     postTime = Column(DateTime(timezone=True)) # precise to hour eg. 2017-02-11 19:00:00
     body = Column(Text)
+    likes = Column(Integer)
+    tags = Column(String(500))
 
 class Users(Base):
     __tablename__ = 'forumusers'
 
-    uid = Column(Integer, primary_key=True) # user id
-    firstName = Column(String(20))
-    lastName = Column(String(20))
+    uid = Column(String(50), primary_key=True) # user id
+    firstName = Column(String(200))
+    lastName = Column(String(100))
     source = Column(String(100)) # URL of the user profile
     colleagues = Column(Integer)
     followers = Column(Integer)
@@ -42,7 +45,8 @@ class Users(Base):
     numPosts = Column(Integer)
     numVotes = Column(Integer)
     numAwards = Column(Integer)
-    account = Column(String(10)) # account type: base, plus, pro
+    points = Column(Integer)
+    account = Column(String(50)) # account type: base, plus, pro
     city = Column(String(100))
     state = Column(String(50))
     dateJoined = Column(DateTime) # creation date of the user account
@@ -59,19 +63,24 @@ class BiggerpocketsPipeline(object):
         self.DB_session = sessionmaker(bind=self.engine)
         self.session = self.DB_session()
         Base.metadata.create_all(self.engine)
-        self.count = 0
-        
+        spider.homeDB = self
+
     def close_spider(self, spider):
         self.session.commit()
         self.session.close()
         self.engine.dispose()
-        
+
+    def get_last_crawl_time(self):
+        t = self.session.execute("SELECT postTime FROM forumposts WHERE URL LIKE '%biggerpockets%' ORDER BY postTime DESC LIMIT 1")
+        t = t.first()[0]
+        return datetime(t.year, t.month, t.day)
+
     def process_item(self, item, spider):
         if isinstance(item, postItem):
             return self.handlePost(item, spider)
         if isinstance(item, userItem):
             return self.handleUser(item, spider)
-                    
+
     def handlePost(self, item, spider):
         post = Posts(URL=item.get('URL'),
                      replyid=item.get('replyid'),
@@ -97,7 +106,7 @@ class BiggerpocketsPipeline(object):
                 raise DropItem('Invalid item found...')
                 break
 	return item
-        
+
     def handleUser(self, item, spider):
         user =Users(uid=item.get('uid'),
                     firstName=item.get('firstName'),
@@ -122,7 +131,7 @@ class BiggerpocketsPipeline(object):
         self.session.flush()
         self.session.commit()
         return item
-            
+
 class DuplicatesPipeline(object):
     def __init__(self):
         connStr = 'mysql+mysqldb://root:home123@127.0.0.1/homeDB'
@@ -130,49 +139,48 @@ class DuplicatesPipeline(object):
         self.DB_session = sessionmaker(bind=self.engine)
         Base.metadata.create_all(self.engine)
         self.session = self.DB_session()
-        self.users = set()
         self.users_seen = set()
         self.posts = set()
-        u = self.session.execute('select uid from forumusers')
-        p = self.session.execute('select pid from forumposts')
-        for i in u:
-            self.users.add(i[0])
-        for i in p:
-            self.posts.add(i[0])
-        
+
     def process_item(self, item, spider):
         if isinstance(item, postItem):
-            post = item.get('pid')
-            if post in self.posts:
-                raise DropItem("Duplicate post found: %d" %(post))
+            URL = item.get('URL')
+            replyid = item.get('replyid')
+            if (URL, replyid) in self.posts:
+                raise DropItem("Duplicate post found: ")
             else:
-                self.posts.add(post)
-                return item
-                
+                p = self.session.query(Posts).filter(Posts.URL == URL, Posts.replyid == replyid).first()
+                if p:
+                    self.posts.add((URL, replyid))
+                    raise DropItem("Duplicate post found: ")
+                else:
+                    self.posts.add((URL, replyid))
+                    return item
+
         if isinstance(item, userItem):
-            user = item.get('uid')
-            if user in self.users_seen:
-                raise DropItem("Duplicate user found: %d" %(user))
-            elif user in self.users:
-                d = {'colleagues': item.get('colleagues'),
-                     'followers': item.get('followers'),
-                     'following': item.get('following'),
-                     'numPosts': item.get('numPosts'),
-                     'numVotes': item.get('numVotes'),
-                     'numAwards': item.get('numAwards'),
-                     'account': item.get('account'),
-                     'city': item.get('city'),
-                     'state': item.get('state'),                            
-                }
-                self.session.query(Users).filter(Users.uid == user).\
-                    update(d)
-                self.session.commit()     
-                self.users_seen.add(user)
-                raise DropItem("Updating user: %d" %(user))
-            else:    
-                self.users_seen.add(user)
-                return item     
-            
-            
-            
-            
+            uid = item.get('uid')
+            if uid in self.users_seen:
+                raise DropItem("Duplicate user found: ")
+            else:
+                u = self.session.query(Users).filter(Users.uid == uid)
+                if u.first():
+                    d = {'colleagues': item.get('colleagues'),
+                         'followers': item.get('followers'),
+                        'following': item.get('following'),
+                        'numPosts': item.get('numPosts'),
+                        'numVotes': item.get('numVotes'),
+                        'numAwards': item.get('numAwards'),
+                        'account': item.get('account'),
+                        'city': item.get('city'),
+                        'state': item.get('state'),
+                    }
+                    u.update(d)
+                    self.session.commit()
+                    self.users_seen.add(uid)
+                    raise DropItem("Updating user: {0}".format(uid))
+                else:
+                    self.users_seen.add(uid)
+                    return item
+
+
+
