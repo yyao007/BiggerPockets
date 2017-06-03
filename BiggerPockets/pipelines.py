@@ -16,6 +16,8 @@ from BiggerPockets.items import postItem, userItem
 from sqlalchemy.exc import InvalidRequestError
 from datetime import datetime
 
+
+connStr = 'mysql+mysqldb://yuan:931005@127.0.0.1/homeDB'
 Base = declarative_base()
 class Posts(Base):
     __tablename__ = 'forumposts'
@@ -58,7 +60,6 @@ class Users(Base):
 
 class BiggerpocketsPipeline(object):
     def open_spider(self, spider):
-        connStr = 'mysql+mysqldb://root:home123@127.0.0.1/homeDB'
         self.engine = create_engine(connStr, convert_unicode=True, echo=False)
         self.DB_session = sessionmaker(bind=self.engine)
         self.session = self.DB_session()
@@ -105,7 +106,7 @@ class BiggerpocketsPipeline(object):
             else:
                 raise DropItem('Invalid item found...')
                 break
-	return item
+	    return item
 
     def handleUser(self, item, spider):
         user =Users(uid=item.get('uid'),
@@ -134,7 +135,6 @@ class BiggerpocketsPipeline(object):
 
 class DuplicatesPipeline(object):
     def __init__(self):
-        connStr = 'mysql+mysqldb://root:home123@127.0.0.1/homeDB'
         self.engine = create_engine(connStr, convert_unicode=True, echo=False)
         self.DB_session = sessionmaker(bind=self.engine)
         Base.metadata.create_all(self.engine)
@@ -171,8 +171,8 @@ class DuplicatesPipeline(object):
                         'numVotes': item.get('numVotes'),
                         'numAwards': item.get('numAwards'),
                         'account': item.get('account'),
-                        'city': item.get('city'),
-                        'state': item.get('state'),
+                        #'city': item.get('city'),
+                        #'state': item.get('state'),
                     }
                     u.update(d)
                     self.session.commit()
